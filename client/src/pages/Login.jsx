@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { getAuthErrorMessage, loginUser } from '../services/authService';
 import { useApp } from '../context/AppContext';
 
@@ -15,14 +15,18 @@ function validate(email, password) {
 }
 
 export default function Login() {
-  const { actions } = useApp();
-  const navigate = useNavigate();
+  const { actions, auth } = useApp();
   const location = useLocation();
-  const redirectTo = useMemo(() => location.state?.from?.pathname || '/', [location.state]);
   const [form, setForm] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  console.info('[ReflectFlow auth] Login form render', {
+    authLoading: auth.loading,
+    initialized: auth.initialized,
+    uid: auth.user?.uid || null
+  });
 
   const updateField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -46,7 +50,6 @@ export default function Login() {
     try {
       await loginUser(form.email, form.password);
       actions.toast('Welcome back to ReflectFlow', 'success');
-      navigate(redirectTo, { replace: true });
     } catch (error) {
       const message = getAuthErrorMessage(error);
       setSubmitError(message);

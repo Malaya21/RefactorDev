@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { getAuthErrorMessage, registerUser } from '../services/authService';
 import { useApp } from '../context/AppContext';
 
@@ -20,14 +20,18 @@ function validate(name, email, password, confirmPassword) {
 }
 
 export default function Register() {
-  const { actions } = useApp();
-  const navigate = useNavigate();
+  const { actions, auth } = useApp();
   const location = useLocation();
-  const redirectTo = useMemo(() => location.state?.from?.pathname || '/', [location.state]);
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  console.info('[ReflectFlow auth] Register form render', {
+    authLoading: auth.loading,
+    initialized: auth.initialized,
+    uid: auth.user?.uid || null
+  });
 
   const updateField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -51,7 +55,6 @@ export default function Register() {
     try {
       await registerUser(form.email, form.password, form.name);
       actions.toast('Account created. Welcome to ReflectFlow!', 'success');
-      navigate(redirectTo, { replace: true });
     } catch (error) {
       const message = getAuthErrorMessage(error);
       setSubmitError(message);
