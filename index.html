@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Premium habit tracker — daily habits, streaks, analytics, and personal growth">
+  <meta name="theme-color" content="#6366f1">
+  <title>ReflectFlow — Habit Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+  <!-- Onboarding -->
+  <div id="onboarding" class="onboarding" aria-hidden="true">
+    <div class="onboarding__content glass">
+      <div class="onboarding__logo">🔥</div>
+      <h1>Welcome to ReflectFlow</h1>
+      <p>Build discipline. Track streaks. Grow every day.</p>
+      <button type="button" class="btn btn--primary" id="onboarding-start">Get Started</button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div id="app-loader" class="app-loader">
+    <div class="loader-ring"></div>
+    <p>Loading your journey...</p>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Confetti canvas -->
+  <canvas id="confetti-canvas" class="confetti-canvas"></canvas>
+
+  <div class="app" id="app">
+    <!-- Sidebar -->
+    <aside class="sidebar glass" id="sidebar">
+      <div class="sidebar__brand">
+        <span class="brand-icon">✦</span>
+        <span class="brand-text">ReflectFlow</span>
+      </div>
+      <nav class="sidebar__nav" id="sidebar-nav" aria-label="Main navigation">
+        <button type="button" class="nav-link active" data-section="dashboard">
+          <span class="nav-icon">📊</span><span>Dashboard</span>
+        </button>
+        <button type="button" class="nav-link" data-section="habits">
+          <span class="nav-icon">✅</span><span>Daily Habits</span>
+        </button>
+        <button type="button" class="nav-link" data-section="analytics">
+          <span class="nav-icon">📈</span><span>Analytics</span>
+        </button>
+        <button type="button" class="nav-link" data-section="notes">
+          <span class="nav-icon">📝</span><span>Notes</span>
+        </button>
+        <button type="button" class="nav-link" data-section="settings">
+          <span class="nav-icon">⚙️</span><span>Settings</span>
+        </button>
+      </nav>
+      <div class="sidebar__footer">
+        <div class="streak-float" id="sidebar-streak">
+          <span class="streak-flame">🔥</span>
+          <div>
+            <span class="streak-label">Best Streak</span>
+            <span class="streak-value" id="sidebar-best-streak">0</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+    <div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
+
+    <!-- Main -->
+    <div class="main-wrapper">
+      <header class="topbar glass">
+        <button type="button" class="btn-icon menu-toggle" id="menu-toggle" aria-label="Toggle menu">☰</button>
+        <div class="topbar__search">
+          <input type="search" id="global-search" placeholder="Search habits, notes… (Ctrl+K)" aria-label="Global search">
+        </div>
+        <div class="topbar__actions">
+          <span class="date-display" id="date-display"></span>
+          <button type="button" class="btn-icon theme-toggle" id="theme-toggle" aria-label="Toggle theme">🌙</button>
+          <div class="notif-wrap">
+            <button type="button" class="btn-icon notif-btn" id="notif-btn" aria-label="Today's tasks" aria-expanded="false">🔔<span class="notif-badge hidden" id="notif-badge">0</span></button>
+            <div id="notif-panel" class="notif-panel glass hidden" role="dialog" aria-label="Today's tasks">
+              <header class="notif-panel__header">
+                <h3>Today's Tasks</h3>
+                <button type="button" class="btn-icon notif-panel__close" id="notif-close" aria-label="Close">×</button>
+              </header>
+              <ul id="notif-list" class="notif-list"></ul>
+              <footer class="notif-panel__footer">
+                <button type="button" class="btn btn--ghost btn-sm" id="notif-goto-habits">Go to Habits</button>
+                <button type="button" class="btn btn--ghost btn-sm" id="notif-goto-settings">Reminders</button>
+              </footer>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="main-content">
+        <!-- Dashboard -->
+        <section id="section-dashboard" class="section active">
+          <header class="section-header">
+            <div>
+              <h1>Dashboard</h1>
+              <p class="subtitle" id="dashboard-greeting">Good morning!</p>
+            </div>
+            <div class="productivity-ring" id="productivity-ring" title="Productivity score">
+              <svg viewBox="0 0 100 100"><circle class="ring-bg" cx="50" cy="50" r="42"/><circle class="ring-fill" cx="50" cy="50" r="42" id="ring-progress"/></svg>
+              <span class="ring-label" id="productivity-score">0%</span>
+            </div>
+          </header>
+
+          <div class="quote-card glass animate-fade-in" id="quote-card">
+            <blockquote id="motivational-quote">"Discipline is choosing between what you want now and what you want most."</blockquote>
+            <cite id="quote-author">— Abraham Lincoln</cite>
+          </div>
+
+          <div class="stats-grid" id="stats-grid">
+            <article class="stat-card glass animate-slide-up" style="--delay:0">
+              <span class="stat-icon">📋</span>
+              <div class="stat-body">
+                <span class="stat-value" data-count="0" id="stat-total">0</span>
+                <span class="stat-label">Total Habits</span>
+              </div>
+            </article>
+            <article class="stat-card glass animate-slide-up" style="--delay:1">
+              <span class="stat-icon">✅</span>
+              <div class="stat-body">
+                <span class="stat-value" data-count="0" id="stat-completed">0</span>
+                <span class="stat-label">Completed Today</span>
+              </div>
+            </article>
+            <article class="stat-card glass animate-slide-up" style="--delay:2">
+              <span class="stat-icon">❌</span>
+              <div class="stat-body">
+                <span class="stat-value" data-count="0" id="stat-missed">0</span>
+                <span class="stat-label">Missed Today</span>
+              </div>
+            </article>
+            <article class="stat-card glass animate-slide-up" style="--delay:3">
+              <span class="stat-icon">🔥</span>
+              <div class="stat-body">
+                <span class="stat-value" data-count="0" id="stat-longest">0</span>
+                <span class="stat-label">Longest Streak</span>
+              </div>
+            </article>
+          </div>
+
+          <div class="dashboard-grid">
+            <article class="card glass">
+              <h2>Today's Summary</h2>
+              <div id="today-summary" class="today-summary"></div>
+            </article>
+            <article class="card glass">
+              <h2>Weekly Overview</h2>
+              <div class="weekly-bars" id="weekly-overview"></div>
+            </article>
+            <article class="card glass">
+              <h2>Current Streaks</h2>
+              <ul class="streak-list" id="current-streaks-list"></ul>
+            </article>
+            <article class="card glass achievements-card">
+              <h2>Achievements</h2>
+              <div class="badges" id="achievements-badges"></div>
+            </article>
+          </div>
+        </section>
+
+        <!-- Habits -->
+        <section id="section-habits" class="section">
+          <header class="section-header">
+            <div>
+              <h1>Daily Habits</h1>
+              <p class="subtitle">Track, complete, and build streaks</p>
+            </div>
+            <div class="habits-toolbar">
+              <select id="filter-category" aria-label="Filter by category">
+                <option value="all">All Categories</option>
+              </select>
+              <select id="sort-habits" aria-label="Sort habits">
+                <option value="order">Custom Order</option>
+                <option value="name">Name</option>
+                <option value="streak">Streak</option>
+                <option value="created">Created Date</option>
+              </select>
+            </div>
+          </header>
+          <div id="habits-list" class="habits-list"></div>
+          <div id="habits-empty" class="empty-state hidden">
+            <span class="empty-icon">🌱</span>
+            <h3>No habits yet</h3>
+            <p>Start building discipline — add your first habit!</p>
+            <button type="button" class="btn btn--primary" data-action="add-habit">Add Habit</button>
+          </div>
+        </section>
+
+        <!-- Analytics -->
+        <section id="section-analytics" class="section">
+          <header class="section-header">
+            <div>
+              <h1>Analytics</h1>
+              <p class="subtitle">Insights into your growth</p>
+            </div>
+          </header>
+          <div id="analytics-summary" class="analytics-summary-wrap"></div>
+          <div class="analytics-grid">
+            <article class="card glass chart-card">
+              <h2>Weekly Progress</h2>
+              <p class="chart-hint">Last 7 days — completion % per day</p>
+              <div class="chart-wrap"><canvas id="chart-weekly"></canvas></div>
+            </article>
+            <article class="card glass chart-card">
+              <h2>Monthly Completion</h2>
+              <p class="chart-hint">Last 3 weeks (W3 = this week)</p>
+              <div class="chart-wrap"><canvas id="chart-monthly"></canvas></div>
+            </article>
+            <article class="card glass success-rates-card">
+              <h2>Success Rates</h2>
+              <p class="chart-hint">Per habit — last 7 days</p>
+              <div id="success-rates" class="success-rates"></div>
+            </article>
+            <article class="card glass">
+              <h2>Top Performers</h2>
+              <div id="top-habits" class="top-habits"></div>
+            </article>
+            <article class="card glass chart-card span-2">
+              <h2>Activity Heatmap</h2>
+              <div id="heatmap" class="heatmap"></div>
+            </article>
+            <article class="card glass chart-card">
+              <h2>Productivity Trend</h2>
+              <p class="chart-hint">14-day trend</p>
+              <div class="chart-wrap chart-wrap--sm"><canvas id="chart-trend"></canvas></div>
+            </article>
+          </div>
+        </section>
+
+        <!-- Notes -->
+        <section id="section-notes" class="section">
+          <header class="section-header">
+            <div>
+              <h1>Notes & Journal</h1>
+              <p class="subtitle">Daily reflections and mood tracking</p>
+            </div>
+            <button type="button" class="btn btn--primary" id="add-note-btn">+ New Entry</button>
+          </header>
+          <div class="notes-toolbar">
+            <input type="search" id="notes-search" placeholder="Search notes…">
+            <input type="date" id="notes-filter-date">
+          </div>
+          <div id="notes-list" class="notes-list"></div>
+          <div id="notes-empty" class="empty-state hidden">
+            <span class="empty-icon">📓</span>
+            <h3>No journal entries</h3>
+            <p>Capture your thoughts and track your mood.</p>
+          </div>
+        </section>
+
+        <!-- Settings -->
+        <section id="section-settings" class="section">
+          <header class="section-header">
+            <div>
+              <h1>Settings</h1>
+              <p class="subtitle">Customize your experience</p>
+            </div>
+          </header>
+          <div class="settings-grid">
+            <article class="card glass setting-card">
+              <h2>Appearance</h2>
+              <label class="setting-row">
+                <span>Theme</span>
+                <select id="setting-theme">
+                  <option value="dark">Dark</option>
+                  <option value="light">Light</option>
+                  <option value="system">System</option>
+                </select>
+              </label>
+              <label class="setting-row">
+                <span>Dashboard Layout</span>
+                <select id="setting-layout">
+                  <option value="default">Default</option>
+                  <option value="compact">Compact</option>
+                  <option value="wide">Wide</option>
+                </select>
+              </label>
+            </article>
+            <article class="card glass setting-card">
+              <h2>Notifications</h2>
+              <label class="setting-row toggle-row">
+                <span>Enable reminders</span>
+                <input type="checkbox" id="setting-notifications" class="toggle">
+              </label>
+              <div id="reminder-list" class="reminder-list"></div>
+              <button type="button" class="btn btn--ghost btn-sm" id="request-notif-permission">Enable Browser Notifications</button>
+            </article>
+            <article class="card glass setting-card">
+              <h2>Data</h2>
+              <div class="setting-actions">
+                <button type="button" class="btn btn--primary" id="export-today-csv">Download Today's Sheet (CSV)</button>
+                <button type="button" class="btn btn--secondary" id="export-today-json">Today's Sheet (JSON)</button>
+                <button type="button" class="btn btn--secondary" id="export-json">Export All JSON</button>
+                <button type="button" class="btn btn--secondary" id="export-csv">Export All CSV</button>
+                <button type="button" class="btn btn--secondary" id="export-print">Print Today's Report</button>
+                <label class="btn btn--secondary file-label">
+                  Import JSON
+                  <input type="file" id="import-json" accept=".json" hidden>
+                </label>
+              </div>
+            </article>
+            <article class="card glass setting-card danger-zone">
+              <h2>Danger Zone</h2>
+              <p>Reset all progress to zero and start fresh from today. Your 8 default habits stay; history, streaks, and notes are cleared.</p>
+              <button type="button" class="btn btn--danger" id="reset-data">Reset All Data</button>
+            </article>
+            <article class="card glass setting-card">
+              <h2>Keyboard Shortcuts</h2>
+              <ul class="shortcuts-list">
+                <li><kbd>Ctrl</kbd>+<kbd>K</kbd> — Search</li>
+                <li><kbd>N</kbd> — New habit</li>
+                <li><kbd>1</kbd>–<kbd>5</kbd> — Navigate sections</li>
+                <li><kbd>T</kbd> — Toggle theme</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- FAB -->
+  <button type="button" class="fab" id="fab-add" aria-label="Add habit" title="Add habit (N)">+</button>
+
+  <!-- Habit Modal -->
+  <dialog id="habit-modal" class="modal glass">
+    <form id="habit-form" class="modal__form">
+      <header class="modal__header">
+        <h2 id="habit-modal-title">Add Habit</h2>
+        <button type="button" class="btn-icon modal-close" data-close-modal aria-label="Close">×</button>
+      </header>
+      <input type="hidden" id="habit-id">
+      <label>Title <input type="text" id="habit-title" required maxlength="80" placeholder="e.g. Read 15 minutes"></label>
+      <label>Description <textarea id="habit-description" rows="2" placeholder="Optional details"></textarea></label>
+      <div class="form-row">
+        <label>Category
+          <select id="habit-category">
+            <option value="Health">Health</option>
+            <option value="Fitness">Fitness</option>
+            <option value="Learning">Learning</option>
+            <option value="Career">Career</option>
+            <option value="Mindfulness">Mindfulness</option>
+            <option value="Lifestyle">Lifestyle</option>
+            <option value="Other">Other</option>
+          </select>
+        </label>
+        <label>Target <input type="text" id="habit-target" placeholder="e.g. 15 min"></label>
+      </div>
+      <div class="form-row">
+        <label>Frequency
+          <select id="habit-frequency">
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly (select days)</option>
+            <option value="custom">Custom Days</option>
+          </select>
+        </label>
+      </div>
+      <fieldset id="custom-days-field" class="custom-days hidden">
+        <legend>Active days</legend>
+        <div class="day-pills">
+          <label><input type="checkbox" value="0"> Sun</label>
+          <label><input type="checkbox" value="1"> Mon</label>
+          <label><input type="checkbox" value="2"> Tue</label>
+          <label><input type="checkbox" value="3"> Wed</label>
+          <label><input type="checkbox" value="4"> Thu</label>
+          <label><input type="checkbox" value="5"> Fri</label>
+          <label><input type="checkbox" value="6"> Sat</label>
+        </div>
+      </fieldset>
+      <footer class="modal__footer">
+        <button type="button" class="btn btn--ghost" data-close-modal>Cancel</button>
+        <button type="submit" class="btn btn--primary">Save Habit</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- Note Modal -->
+  <dialog id="note-modal" class="modal glass">
+    <form id="note-form" class="modal__form">
+      <header class="modal__header">
+        <h2 id="note-modal-title">New Journal Entry</h2>
+        <button type="button" class="btn-icon modal-close" data-close-modal aria-label="Close">×</button>
+      </header>
+      <input type="hidden" id="note-id">
+      <label>Date <input type="date" id="note-date" required></label>
+      <label>Mood
+        <select id="note-mood">
+          <option value="great">😄 Great</option>
+          <option value="good">🙂 Good</option>
+          <option value="neutral">😐 Neutral</option>
+          <option value="low">😔 Low</option>
+          <option value="bad">😢 Bad</option>
+        </select>
+      </label>
+      <label>Reflection <textarea id="note-content" rows="6" required placeholder="How was your day? What did you learn?"></textarea></label>
+      <footer class="modal__footer">
+        <button type="button" class="btn btn--ghost" data-close-modal>Cancel</button>
+        <button type="submit" class="btn btn--primary">Save Entry</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- Habit note quick modal -->
+  <dialog id="habit-note-modal" class="modal glass modal--sm">
+    <form id="habit-note-form" class="modal__form">
+      <header class="modal__header">
+        <h2>Habit Note</h2>
+        <button type="button" class="btn-icon modal-close" data-close-modal>×</button>
+      </header>
+      <input type="hidden" id="habit-note-habit-id">
+      <label>Note for today <textarea id="habit-note-text" rows="4"></textarea></label>
+      <footer class="modal__footer">
+        <button type="button" class="btn btn--ghost" data-close-modal>Cancel</button>
+        <button type="submit" class="btn btn--primary">Save</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <script src="js/utils/security.js"></script>
+  <script src="js/utils/date.js"></script>
+  <script src="js/utils/browser.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/core/state.js"></script>
+  <script src="js/streak.js"></script>
+  <script src="js/daily.js"></script>
+  <script src="js/habits.js"></script>
+  <script src="js/notes.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

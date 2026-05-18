@@ -1,0 +1,95 @@
+/* animations.css — Motion & transitions */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes flamePulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.15); filter: brightness(1.2); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s ease forwards;
+  animation-delay: calc(var(--delay, 0) * 0.08s);
+  opacity: 0;
+}
+
+.stat-card:hover .stat-icon {
+  animation: flamePulse 0.6s ease;
+}
+
+.nav-link.active .nav-icon {
+  animation: scaleIn 0.3s ease;
+}
+
+.habit-card {
+  animation: fadeIn 0.35s ease;
+}
+
+.section.active .card {
+  animation: slideUp 0.4s ease backwards;
+}
+
+.section.active .card:nth-child(1) { animation-delay: 0.05s; }
+.section.active .card:nth-child(2) { animation-delay: 0.1s; }
+.section.active .card:nth-child(3) { animation-delay: 0.15s; }
+.section.active .card:nth-child(4) { animation-delay: 0.2s; }
+
+/* Loading skeleton shimmer */
+.skeleton {
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-hover) 50%, var(--surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* Page transition */
+.main-content {
+  animation: fadeIn 0.3s ease;
+}
+
+/* Hover lift on interactive cards */
+.habit-card:hover,
+.note-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow), var(--glow);
+}
+
+/* Button ripple feel */
+.btn:active {
+  transform: scale(0.97);
+}
+
+/* FAB entrance */
+.fab {
+  animation: scaleIn 0.5s ease 0.3s backwards;
+}
