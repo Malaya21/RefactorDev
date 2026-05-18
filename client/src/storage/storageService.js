@@ -230,38 +230,61 @@ export function sanitizeImportedState(parsed) {
 export function loadState() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return defaultState();
+    // Start with a state that has empty habits and notes
+    // These will be loaded from Firestore when user authenticates
+    const baseState = {
+      ...defaultState(),
+      habits: [],    // IMPORTANT: Always empty initially, loaded from Firestore
+      notes: []      // IMPORTANT: Always empty initially, loaded from Firestore
+    };
+    
+    if (!raw) return baseState;
+    
     let data = JSON.parse(raw);
     if ((data.dataEpoch || 1) < DATA_EPOCH) {
       const preserved = data.settings ? { ...data.settings, onboarded: true } : null;
       data = freshStartState(preserved);
       localStorage.setItem('reflectflow_show_fresh_toast', '1');
       saveState(data);
-      return data;
+      return { ...data, habits: [], notes: [] };  // Clear habits/notes
     }
+    
+    // Merge localStorage settings/metadata with empty user data
+    // This ensures we never load stale user data from localStorage
     data = sanitizeImportedState({
       ...data,
       settings: data.settings || defaultState().settings,
-      notes: data.notes || [],
-      habits: data.habits || [],
+      notes: [],    // IMPORTANT: Never load from localStorage
+      habits: [],   // IMPORTANT: Never load from localStorage
       dailySummaries: data.dailySummaries || {},
       analytics: data.analytics || {},
       lastActiveDate: data.lastActiveDate || data.activeDate || data.lastVisit || todayKey()
     });
+    
+    // Force empty user data
+    data.habits = [];
+    data.notes = [];
+    
     return data;
   } catch (error) {
     console.warn('Storage load failed, resetting:', error);
-    return defaultState();
+    const state = defaultState();
+    return { ...state, habits: [], notes: [] };  // Ensure empty user data
   }
 }
 
 export function saveState(state) {
+  // IMPORTANT: Only persist settings and UI preferences
+  // Habits and notes are NEVER persisted to localStorage - they come from Firestore only
   const safeState = {
-    ...state,
+    settings: state.settings || defaultState().settings,
+    achievements: state.achievements || [],
+    analytics: state.analytics || {},
+    quoteIndex: state.quoteIndex !== undefined ? state.quoteIndex : 0,
     lastVisit: todayKey(),
     activeDate: state.activeDate || todayKey(),
     lastActiveDate: state.lastActiveDate || state.activeDate || todayKey(),
-    analytics: state.analytics || {}
+    // IMPORTANT: Habits and notes removed - they must NOT be in localStorage
   };
   localStorage.setItem(KEY, JSON.stringify(safeState));
   return safeState;
