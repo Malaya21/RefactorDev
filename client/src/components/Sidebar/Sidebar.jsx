@@ -8,6 +8,7 @@ const links = [
   { to: '/', icon: 'layoutDashboard', label: 'Dashboard' },
   { to: '/habits', icon: 'listChecks', label: 'Daily Habits' },
   { to: '/analytics', icon: 'barChart', label: 'Analytics' },
+  { to: '/leaderboard', icon: 'trophy', label: 'Leaderboard' },
   { to: '/notes', icon: 'notebookPen', label: 'Notes' },
   { to: '/settings', icon: 'settings', label: 'Settings' }
 ];

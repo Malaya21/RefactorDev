@@ -10,6 +10,14 @@
   }
   .rate-pct { text-align: left; }
   .analytics-summary { flex-direction: column; gap: 0.5rem; }
+  .leaderboard-table__head,
+  .leaderboard-row {
+    grid-template-columns: 56px 44px minmax(150px, 1fr) 76px 88px 88px;
+  }
+  .leaderboard-table__head span:last-child,
+  .leaderboard-completed {
+    display: none;
+  }
 }
 
 @media (max-width: 992px) {
@@ -82,11 +90,41 @@
   .card { padding: 1rem; }
   .setting-actions .btn { flex: 1 1 100%; min-height: 44px; }
   .notes-list { grid-template-columns: 1fr; }
+  .podium-grid { grid-template-columns: 1fr; }
+  .podium-card--2,
+  .podium-card--3 { margin-top: 0; }
+  .podium-card { min-height: 190px; }
+  .leaderboard-table__head { display: none; }
+  .leaderboard-row {
+    grid-template-columns: 44px 42px minmax(0, 1fr);
+    gap: 0.6rem;
+    align-items: center;
+  }
+  .leaderboard-pill,
+  .leaderboard-score,
+  .leaderboard-streak {
+    grid-row: 2;
+    margin-top: 0.15rem;
+  }
+  .leaderboard-pill { grid-column: 2 / 3; }
+  .leaderboard-score { grid-column: 3 / 4; justify-self: start; }
+  .leaderboard-streak { grid-column: 3 / 4; justify-self: end; }
+  .leaderboard-user { margin-left: 0; }
 }
 
 @media (max-width: 480px) {
   .stats-grid { grid-template-columns: 1fr; }
   .stat-card { padding: 1rem; }
+  .your-rank-card { width: 100%; }
+  .leaderboard-row {
+    padding: 0.75rem;
+  }
+  .leaderboard-streak {
+    display: none;
+  }
+  .leaderboard-score {
+    justify-self: stretch;
+  }
   .modal__form label,
   .modal__footer,
   .modal__header { padding-left: 1rem; padding-right: 1rem; }

@@ -23,6 +23,7 @@ import { createOrUpdateNote, deleteAllNotes, deleteNoteFromFirestore, loadNotes 
 import { completeUserOnboarding, getUserProfile, markUserInitialized } from '../services/userService';
 import { getHabitTemplatesForInterests } from '../data/habitTemplates';
 import { awardHabitCompletionXP, DEFAULT_GAMIFICATION, ensureGamificationProfile, subscribeToGamification } from '../services/gamificationService';
+import { buildLeaderboardEntry, syncLeaderboardEntry } from '../services/leaderboardService';
 
 const AppContext = createContext(null);
 const CLOUD_RESTORE_TIMEOUT_MS = 10000;
@@ -106,6 +107,7 @@ export function AppProvider({ children }) {
   });
   const authSessionRef = useRef(0);
   const habitWriteTokensRef = useRef(new Map());
+  const leaderboardSyncSignatureRef = useRef('');
   
   // Data loading state
   const [dataLoading, setDataLoading] = useState(false);
@@ -927,6 +929,38 @@ export function AppProvider({ children }) {
       setGamification(DEFAULT_GAMIFICATION);
     });
   }, [auth.user?.uid]);
+
+  useEffect(() => {
+    const user = auth.user;
+    if (!user?.uid || dataLoading || auth.onboardingRequired) return undefined;
+
+    const entry = buildLeaderboardEntry({
+      user,
+      habits: state.habits,
+      gamification
+    });
+    const signature = JSON.stringify({
+      uid: entry.uid,
+      weekKey: entry.weekKey,
+      weeklyXP: entry.weeklyXP,
+      currentStreak: entry.currentStreak,
+      completedThisWeek: entry.completedThisWeek,
+      level: entry.level,
+      displayName: entry.displayName,
+      photoURL: entry.photoURL
+    });
+
+    if (leaderboardSyncSignatureRef.current === signature) return undefined;
+    leaderboardSyncSignatureRef.current = signature;
+
+    const timeoutId = window.setTimeout(() => {
+      syncLeaderboardEntry(user.uid, entry).catch((error) => {
+        warnCloud('Leaderboard sync failed', error);
+      });
+    }, 450);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [auth.user, auth.onboardingRequired, dataLoading, gamification, state.habits]);
 
   useNotifications(state, {
     onStatusChange: useCallback((status) => {

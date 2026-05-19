@@ -42,6 +42,26 @@ export function daysBetween(startKey, endKey) {
   return getDatesBetween(startKey, endKey, { includeStart: false, includeEnd: true }).length;
 }
 
+export function startOfWeekKey(date = new Date()) {
+  const d = new Date(date);
+  d.setHours(12, 0, 0, 0);
+  const day = d.getDay();
+  const offset = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + offset);
+  return formatDateKey(d);
+}
+
+export function getWeekRange(date = new Date()) {
+  const start = startOfWeekKey(date);
+  const end = addDays(start, 6);
+  return { start, end, weekKey: start };
+}
+
+export function getCurrentWeekDates(date = new Date()) {
+  const { start, end } = getWeekRange(date);
+  return getDatesBetween(start, end);
+}
+
 export function msUntilMidnight() {
   const now = new Date();
   const midnight = new Date(now);

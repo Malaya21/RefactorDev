@@ -3,6 +3,7 @@ import AppLayout from './components/Layout/AppLayout';
 import DashboardPage from './pages/DashboardPage';
 import HabitsPage from './pages/HabitsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import LeaderboardPage from './pages/LeaderboardPage';
 import NotesPage from './pages/NotesPage';
 import SettingsPage from './pages/SettingsPage';
 import Login from './pages/Login';
@@ -147,6 +148,7 @@ export default function App() {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/habits" element={<HabitsPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/notes" element={<NotesPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
