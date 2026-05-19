@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getAuthErrorMessage, registerUser } from '../services/authService';
 import { useApp } from '../context/AppContext';
+import GoogleAuthButton from '../components/Auth/GoogleAuthButton';
 
 function validate(name, email, password, confirmPassword) {
   const errors = {};
@@ -25,7 +26,7 @@ export default function Register() {
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState('');
 
   console.info('[ReflectFlow auth] Register form render', {
     authLoading: auth.loading,
@@ -49,7 +50,7 @@ export default function Register() {
       return;
     }
 
-    setLoading(true);
+    setLoading('password');
     setSubmitError('');
 
     try {
@@ -60,8 +61,25 @@ export default function Register() {
       setSubmitError(message);
       actions.toast(message, 'error', 5200);
     } finally {
-      setLoading(false);
+      setLoading('');
     }
+  };
+
+  const handleGoogleStart = () => {
+    setLoading('google');
+    setSubmitError('');
+    setErrors({});
+  };
+
+  const handleGoogleSuccess = ({ isNewUser }) => {
+    actions.toast(isNewUser ? 'Google account connected. Welcome to ReflectFlow!' : 'Signed in with Google', 'success');
+    setLoading('');
+  };
+
+  const handleGoogleError = (message) => {
+    setSubmitError(message);
+    actions.toast(message, 'error', 5200);
+    setLoading('');
   };
 
   return (
@@ -75,6 +93,17 @@ export default function Register() {
           <h1 id="register-title">Create your account</h1>
           <p>Start tracking habits with a private Firebase-backed sign-in.</p>
         </header>
+
+        <GoogleAuthButton
+          mode="register"
+          loading={loading === 'google'}
+          disabled={loading === 'password'}
+          onStart={handleGoogleStart}
+          onSuccess={handleGoogleSuccess}
+          onError={handleGoogleError}
+        />
+
+        <div className="auth-divider"><span>or create an email account</span></div>
 
         <form className="auth-form" onSubmit={submit} noValidate>
           <label>
@@ -135,8 +164,8 @@ export default function Register() {
 
           {submitError && <div className="auth-alert" role="alert">{submitError}</div>}
 
-          <button type="submit" className="btn btn--primary auth-submit" disabled={loading}>
-            {loading ? 'Creating account...' : 'Create account'}
+          <button type="submit" className="btn btn--primary auth-submit" disabled={!!loading}>
+            {loading === 'password' ? 'Creating account...' : 'Create account'}
           </button>
         </form>
 

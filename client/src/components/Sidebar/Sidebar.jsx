@@ -10,9 +10,21 @@ const links = [
   { to: '/settings', icon: '⚙️', label: 'Settings' }
 ];
 
+function getInitials(userLabel) {
+  return userLabel
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || 'R';
+}
+
 export default function Sidebar() {
   const { state, ui, auth, actions } = useApp();
   const userLabel = auth.user?.displayName || auth.user?.email || 'ReflectFlow user';
+  const providerLabel = auth.user?.provider === 'google.com' || auth.user?.provider === 'google'
+    ? 'Signed in with Google'
+    : 'Signed in with email';
 
   return (
     <>
@@ -36,9 +48,13 @@ export default function Sidebar() {
         </nav>
         <div className="sidebar__footer">
           <div className="sidebar-user">
-            <div className="sidebar-user__avatar" aria-hidden="true">{userLabel.charAt(0).toUpperCase()}</div>
+            <div className="sidebar-user__avatar" aria-hidden="true">
+              {auth.user?.photoURL
+                ? <img src={auth.user.photoURL} alt="" referrerPolicy="no-referrer" />
+                : getInitials(userLabel)}
+            </div>
             <div className="sidebar-user__meta">
-              <span>Signed in as</span>
+              <span>{providerLabel}</span>
               <strong title={userLabel}>{userLabel}</strong>
             </div>
           </div>

@@ -5,7 +5,7 @@ import { todayKey } from '../../utils/date';
 import { getStatus, isScheduledDay } from '../../services/streakService';
 
 export default function Topbar() {
-  const { state, ui, actions } = useApp();
+  const { state, ui, auth, actions } = useApp();
   const navigate = useNavigate();
   const tasks = useMemo(() => {
     const today = todayKey();
@@ -22,6 +22,13 @@ export default function Topbar() {
   }, [state.habits]);
   const date = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
   const theme = document.documentElement.getAttribute('data-theme') || state.settings.theme;
+  const userLabel = auth.user?.displayName || auth.user?.email || 'ReflectFlow user';
+  const initials = userLabel
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || 'R';
 
   return (
     <header className="topbar glass">
@@ -36,6 +43,11 @@ export default function Topbar() {
         <button type="button" className="btn-icon theme-toggle" onClick={() => actions.updateSettings({ theme: theme === 'dark' ? 'light' : 'dark' })} aria-label="Toggle theme">
           {theme === 'dark' ? '🌙' : '☀'}
         </button>
+        <div className="topbar-profile" title={userLabel} aria-label={`Signed in as ${userLabel}`}>
+          {auth.user?.photoURL
+            ? <img src={auth.user.photoURL} alt="" referrerPolicy="no-referrer" />
+            : <span>{initials}</span>}
+        </div>
         <div className="notif-wrap">
           <button type="button" className="btn-icon notif-btn" onClick={() => actions.toggleNotifications()} aria-label="Today's tasks" aria-expanded={ui.notificationOpen}>
             🔔<span className={`notif-badge ${tasks.pending.length ? '' : 'hidden'}`}>{tasks.pending.length}</span>

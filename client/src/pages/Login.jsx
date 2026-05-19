@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getAuthErrorMessage, loginUser } from '../services/authService';
 import { useApp } from '../context/AppContext';
+import GoogleAuthButton from '../components/Auth/GoogleAuthButton';
 
 function validate(email, password) {
   const errors = {};
@@ -20,7 +21,7 @@ export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState('');
 
   console.info('[ReflectFlow auth] Login form render', {
     authLoading: auth.loading,
@@ -44,7 +45,7 @@ export default function Login() {
       return;
     }
 
-    setLoading(true);
+    setLoading('password');
     setSubmitError('');
 
     try {
@@ -55,8 +56,25 @@ export default function Login() {
       setSubmitError(message);
       actions.toast(message, 'error', 5200);
     } finally {
-      setLoading(false);
+      setLoading('');
     }
+  };
+
+  const handleGoogleStart = () => {
+    setLoading('google');
+    setSubmitError('');
+    setErrors({});
+  };
+
+  const handleGoogleSuccess = ({ isNewUser }) => {
+    actions.toast(isNewUser ? 'Google account connected. Welcome to ReflectFlow!' : 'Signed in with Google', 'success');
+    setLoading('');
+  };
+
+  const handleGoogleError = (message) => {
+    setSubmitError(message);
+    actions.toast(message, 'error', 5200);
+    setLoading('');
   };
 
   return (
@@ -70,6 +88,16 @@ export default function Login() {
           <h1 id="login-title">Welcome back</h1>
           <p>Sign in to keep your habit dashboard private and persistent.</p>
         </header>
+
+        <GoogleAuthButton
+          loading={loading === 'google'}
+          disabled={loading === 'password'}
+          onStart={handleGoogleStart}
+          onSuccess={handleGoogleSuccess}
+          onError={handleGoogleError}
+        />
+
+        <div className="auth-divider"><span>or sign in with email</span></div>
 
         <form className="auth-form" onSubmit={submit} noValidate>
           <label>
@@ -102,8 +130,8 @@ export default function Login() {
 
           {submitError && <div className="auth-alert" role="alert">{submitError}</div>}
 
-          <button type="submit" className="btn btn--primary auth-submit" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign in'}
+          <button type="submit" className="btn btn--primary auth-submit" disabled={!!loading}>
+            {loading === 'password' ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
 
