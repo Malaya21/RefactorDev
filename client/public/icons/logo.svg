@@ -1,0 +1,41 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0" y1="0" x2="512" y2="512">
+      <stop offset="0%" stop-color="#6D28D9"/>
+      <stop offset="100%" stop-color="#EC4899"/>
+    </linearGradient>
+
+    <linearGradient id="textGradient" x1="120" y1="100" x2="380" y2="420">
+      <stop offset="0%" stop-color="#F9A8D4"/>
+      <stop offset="100%" stop-color="#FFFFFF"/>
+    </linearGradient>
+
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="12" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="120" fill="url(#bgGradient)"/>
+
+  <!-- Glow -->
+  <circle cx="380" cy="120" r="80" fill="#EC4899" opacity="0.25" filter="url(#glow)"/>
+  <circle cx="140" cy="400" r="100" fill="#8B5CF6" opacity="0.2" filter="url(#glow)"/>
+
+  <!-- ReflectFlow R -->
+  <path
+    d="M165 110H280C360 110 410 155 410 225C410 285 375 325 315 340L395 420H320L255 350H225V420H165V110ZM225 170V295H280C325 295 350 270 350 230C350 190 325 170 280 170H225Z"
+    fill="url(#textGradient)"
+  />
+
+  <!-- Spark -->
+  <path
+    d="M420 75L432 105L462 117L432 129L420 159L408 129L378 117L408 105L420 75Z"
+    fill="#FDE68A"
+    filter="url(#glow)"
+  />
+</svg>
