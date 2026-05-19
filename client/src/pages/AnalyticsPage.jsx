@@ -1,5 +1,6 @@
 import { useAnalytics } from '../hooks/useAnalytics';
 import { COLORS } from '../services/analyticsService';
+import SmartInsights from '../components/SmartInsights';
 
 export default function AnalyticsPage() {
   const { weekly, monthly, trend, heatmap, successRates, topBottom } = useAnalytics();
@@ -22,6 +23,8 @@ export default function AnalyticsPage() {
         <Metric label="completions" value={`${totalCompleted} / ${totalScheduled}`} />
         <Metric label="active days" value={activeDays} />
       </div>
+
+      <SmartInsights />
 
       <div className="analytics-grid analytics-grid--react">
         <article className="card glass analytics-card analytics-card--chart">

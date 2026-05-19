@@ -1,6 +1,7 @@
 import { useApp } from '../context/AppContext';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { Achievements, ProductivityRing, StatsGrid, StreakList, TodaySummary, WeeklyOverview, XPProgressCard } from '../components/Dashboard/DashboardWidgets';
+import SmartInsights from '../components/SmartInsights';
 
 export default function DashboardPage() {
   const { quote } = useApp();
@@ -23,6 +24,7 @@ export default function DashboardPage() {
       </div>
       <StatsGrid />
       <XPProgressCard />
+      <SmartInsights compact />
       <div className="dashboard-grid">
         <article className="card glass"><h2>Today&apos;s Summary</h2><TodaySummary /></article>
         <article className="card glass"><h2>Weekly Overview</h2><WeeklyOverview /></article>

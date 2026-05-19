@@ -90,6 +90,9 @@
   .card { padding: 1rem; }
   .setting-actions .btn { flex: 1 1 100%; min-height: 44px; }
   .notes-list { grid-template-columns: 1fr; }
+  .smart-insights__header { flex-direction: column; }
+  .smart-score-strip { width: 100%; justify-content: stretch; }
+  .smart-score { flex: 1 1 120px; }
   .podium-grid { grid-template-columns: 1fr; }
   .podium-card--2,
   .podium-card--3 { margin-top: 0; }
@@ -129,6 +132,9 @@
   .modal__footer,
   .modal__header { padding-left: 1rem; padding-right: 1rem; }
   .toast-container { left: 1rem; right: 1rem; transform: none; }
+  .smart-insights { padding: 0.9rem; }
+  .smart-insights__grid { grid-template-columns: 1fr; }
+  .smart-score { min-width: 0; }
 }
 
 /* Layout variants */
