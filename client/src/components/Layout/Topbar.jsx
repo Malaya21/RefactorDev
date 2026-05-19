@@ -14,7 +14,7 @@ export default function Topbar() {
     state.habits.forEach((habit) => {
       if (!isScheduledDay(habit, d)) return;
       const status = getStatus(habit, today);
-      if (status === 'completed') grouped.completed.push(habit);
+      if (status === 'done') grouped.completed.push(habit);
       else if (status === 'missed') grouped.missed.push(habit);
       else grouped.pending.push(habit);
     });
@@ -63,7 +63,7 @@ export default function Topbar() {
               {tasks.pending.map((habit) => (
                 <li className="notif-item notif-item--pending" key={habit.id}>
                   <span>{habit.title}</span>
-                  <button type="button" className="btn btn--success btn-sm" onClick={() => actions.markHabit(habit.id, 'completed')}>Done</button>
+                  <button type="button" className="btn btn--success btn-sm" onClick={() => actions.markHabit(habit.id, 'done')}>Done</button>
                 </li>
               ))}
               {!!tasks.completed.length && <li className="notif-section-title">Completed ({tasks.completed.length})</li>}

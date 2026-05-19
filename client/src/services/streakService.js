@@ -1,4 +1,5 @@
 import { formatDateKey, todayKey } from '../utils/date';
+import { calculateStreakFromHistory, getHabitStatusForDate, normalizeHabitHistory, updateHabitHistory } from '../utils/historyHelpers';
 
 export function isScheduledDay(habit, date = new Date()) {
   const dow = date.getDay();
@@ -10,40 +11,15 @@ export function isScheduledDay(habit, date = new Date()) {
 }
 
 export function getStatus(habit, dateKey) {
-  return (habit.history || {})[dateKey] || null;
+  return getHabitStatusForDate(habit, dateKey);
 }
 
 export function setStatus(habit, dateKey, status) {
-  const next = { ...habit, history: { ...(habit.history || {}) } };
-  if (status === null) delete next.history[dateKey];
-  else next.history[dateKey] = status;
-  return recalculate(next);
+  return recalculate(updateHabitHistory(habit, dateKey, status));
 }
 
 export function computeCurrentStreak(habit, fromDate = new Date()) {
-  let streak = 0;
-  const d = new Date(fromDate);
-  d.setHours(12, 0, 0, 0);
-  const key = formatDateKey(d);
-  if (isScheduledDay(habit, d) && getStatus(habit, key) !== 'completed') {
-    d.setDate(d.getDate() - 1);
-  }
-
-  for (let i = 0; i < 400; i++) {
-    if (!isScheduledDay(habit, d)) {
-      d.setDate(d.getDate() - 1);
-      continue;
-    }
-    const date = formatDateKey(d);
-    const status = getStatus(habit, date);
-    if (status === 'completed') {
-      streak++;
-      d.setDate(d.getDate() - 1);
-    } else {
-      break;
-    }
-  }
-  return streak;
+  return calculateStreakFromHistory(habit, { fromDate, isScheduledDay });
 }
 
 export function isConsecutiveScheduled(prev, curr, habit) {
@@ -57,19 +33,20 @@ export function isConsecutiveScheduled(prev, curr, habit) {
 }
 
 export function computeLongestStreak(habit) {
-  const keys = Object.keys(habit.history || {}).sort();
+  const history = normalizeHabitHistory(habit.history);
+  const keys = Object.keys(history).sort();
   let longest = 0;
   let current = 0;
   let prevDate = null;
   keys.forEach((key) => {
     const d = new Date(`${key}T12:00:00`);
     if (!isScheduledDay(habit, d)) return;
-    const status = habit.history[key];
-    if (status === 'completed') {
+    const status = history[key];
+    if (status === 'done') {
       current = prevDate && isConsecutiveScheduled(prevDate, d, habit) ? current + 1 : 1;
       longest = Math.max(longest, current);
       prevDate = d;
-    } else if (status === 'missed') {
+    } else {
       current = 0;
       prevDate = d;
     }
@@ -86,16 +63,17 @@ export function computeConsistency(habit, days = 30) {
     d.setDate(d.getDate() - i);
     if (!isScheduledDay(habit, d)) continue;
     scheduled++;
-    if (getStatus(habit, formatDateKey(d)) === 'completed') completed++;
+    if (getStatus(habit, formatDateKey(d)) === 'done') completed++;
   }
   return scheduled ? Math.round((completed / scheduled) * 100) : 0;
 }
 
 export function recalculate(habit) {
-  const current = computeCurrentStreak(habit);
-  const longest = Math.max(habit.streak?.longest || 0, computeLongestStreak(habit), current);
+  const normalized = { ...habit, history: normalizeHabitHistory(habit.history) };
+  const current = computeCurrentStreak(normalized);
+  const longest = Math.max(normalized.streak?.longest || 0, computeLongestStreak(normalized), current);
   return {
-    ...habit,
+    ...normalized,
     streak: { current, longest },
     longestStreak: longest,
     consistency: computeConsistency(habit)
@@ -103,7 +81,7 @@ export function recalculate(habit) {
 }
 
 export function markComplete(habit, dateKey = todayKey()) {
-  return setStatus(habit, dateKey, 'completed');
+  return setStatus(habit, dateKey, 'done');
 }
 
 export function markMissed(habit, dateKey = todayKey()) {
@@ -112,7 +90,7 @@ export function markMissed(habit, dateKey = todayKey()) {
 
 export function getLastCompletedDate(habit) {
   return Object.keys(habit.history || {})
-    .filter((key) => habit.history[key] === 'completed')
+    .filter((key) => getStatus(habit, key) === 'done')
     .sort()
     .reverse()[0] || null;
 }

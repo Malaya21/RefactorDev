@@ -85,7 +85,7 @@ export function TodaySummary() {
       <div className="summary-list">
         {items.map((habit) => {
           const status = getStatus(habit, today);
-          const icon = status === 'completed' ? 'checkCircle' : status === 'missed' ? 'xCircle' : 'circleDashed';
+          const icon = status === 'done' ? 'checkCircle' : status === 'missed' ? 'xCircle' : 'circleDashed';
           return <div className={`summary-row summary-row--${status || 'pending'}`} key={habit.id}><span><Icon name={icon} size={17} /></span><span>{habit.title}</span></div>;
         })}
         {!items.length && <p className="empty-hint">No habits scheduled today</p>}
@@ -127,7 +127,7 @@ export function StreakList() {
 
 export function Achievements() {
   const { state } = useApp();
-  const totalCompleted = state.habits.reduce((n, h) => n + Object.values(h.history || {}).filter((s) => s === 'completed').length, 0);
+  const totalCompleted = state.habits.reduce((n, h) => n + Object.values(h.history || {}).filter((s) => s === 'done' || s === 'completed').length, 0);
   const { stats } = useAnalytics();
   const achievements = [
     ['sparkles', 'First Step', totalCompleted >= 1],

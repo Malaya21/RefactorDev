@@ -1,5 +1,6 @@
 import { doc, getDoc, onSnapshot, runTransaction, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { canEditDate } from '../utils/dateLocks';
 import { calculateLevel } from '../utils/levelSystem';
 import { getStatus, isScheduledDay } from './streakService';
 
@@ -38,7 +39,7 @@ function getTodayScheduledHabits(habits, dateKey) {
 
 function getPerfectDayAward(habitsAfterCompletion, dateKey) {
   const scheduled = getTodayScheduledHabits(habitsAfterCompletion, dateKey);
-  const completed = scheduled.filter((habit) => getStatus(habit, dateKey) === 'completed');
+  const completed = scheduled.filter((habit) => getStatus(habit, dateKey) === 'done');
   return scheduled.length > 0 && completed.length === scheduled.length;
 }
 
@@ -117,7 +118,7 @@ export async function awardHabitCompletionXP(uid, { habitBefore, habitAfter, hab
     throw new Error('Invalid XP award payload');
   }
 
-  if (getStatus(habitBefore || {}, dateKey) === 'completed') {
+  if (!canEditDate(dateKey) || getStatus(habitBefore || {}, dateKey) === 'done') {
     return { awardedXP: 0, leveledUp: false, events: [] };
   }
 

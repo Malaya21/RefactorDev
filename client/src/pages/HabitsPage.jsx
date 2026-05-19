@@ -1,11 +1,15 @@
 import { useMemo, useState } from 'react';
 import HabitCard from '../components/HabitCard/HabitCard';
 import { useApp } from '../context/AppContext';
+import { addDays, todayKey } from '../utils/date';
+import { canEditDate } from '../utils/dateLocks';
 
 export default function HabitsPage() {
   const { state, ui, actions } = useApp();
   const [category, setCategory] = useState('all');
   const [sort, setSort] = useState('order');
+  const activeDate = state.activeDate || todayKey();
+  const yesterday = addDays(todayKey(), -1);
   const categories = useMemo(() => [...new Set(state.habits.map((h) => h.category))].sort(), [state.habits]);
   const habits = useMemo(() => {
     const q = ui.search.trim().toLowerCase();
@@ -25,6 +29,12 @@ export default function HabitsPage() {
       <header className="section-header">
         <div><h1>Daily Habits</h1><p className="subtitle">Track, complete, and build streaks</p></div>
         <div className="habits-toolbar">
+          <div className="date-toolbar" aria-label="Selected habit date">
+            <input type="date" value={activeDate} onChange={(e) => actions.setActiveDate(e.target.value)} aria-label="Selected date" />
+            <button type="button" className={`btn btn--ghost btn-sm ${activeDate === todayKey() ? 'active' : ''}`} onClick={() => actions.setActiveDate(todayKey())}>Today</button>
+            <button type="button" className={`btn btn--ghost btn-sm ${activeDate === yesterday ? 'active' : ''}`} onClick={() => actions.setActiveDate(yesterday)}>Yesterday</button>
+            {!canEditDate(activeDate) && <span className="date-lock-pill">Read-only</span>}
+          </div>
           <select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Filter by category">
             <option value="all">All Categories</option>
             {categories.map((c) => <option value={c} key={c}>{c}</option>)}

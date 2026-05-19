@@ -14,7 +14,7 @@ export function todayStats(state) {
     if (!isScheduledDay(habit, d)) return;
     scheduled++;
     const status = getStatus(habit, today);
-    if (status === 'completed') completed++;
+    if (status === 'done') completed++;
     else if (status === 'missed') missed++;
     else pending++;
   });
@@ -44,7 +44,7 @@ export function getDailyCompletion(state, days = 7) {
     (state.habits || []).forEach((habit) => {
       if (!isScheduledDay(habit, d)) return;
       scheduled++;
-      if (getStatus(habit, key) === 'completed') completed++;
+      if (getStatus(habit, key) === 'done') completed++;
     });
     result.push({
       label: d.toLocaleDateString(undefined, { weekday: 'short' }),
@@ -66,7 +66,7 @@ export function getHabitWeeklyRate(habit, days = 7) {
     d.setDate(d.getDate() - i);
     if (!isScheduledDay(habit, d)) continue;
     scheduled++;
-    if (getStatus(habit, formatDateKey(d)) === 'completed') completed++;
+    if (getStatus(habit, formatDateKey(d)) === 'done') completed++;
   }
   return scheduled ? Math.round((completed / scheduled) * 100) : 0;
 }
@@ -105,7 +105,7 @@ export function getHeatmapData(state, weeks = 12) {
     (state.habits || []).forEach((habit) => {
       if (!isScheduledDay(habit, d)) return;
       scheduled++;
-      if (getStatus(habit, key) === 'completed') completed++;
+      if (getStatus(habit, key) === 'done') completed++;
     });
     cells.push({
       date: key,
@@ -130,7 +130,7 @@ export function getMonthlyData(state) {
       (state.habits || []).forEach((habit) => {
         if (!isScheduledDay(habit, date)) return;
         total++;
-        if (getStatus(habit, key) === 'completed') done++;
+        if (getStatus(habit, key) === 'done') done++;
       });
     }
     return {

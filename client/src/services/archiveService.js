@@ -12,7 +12,7 @@ export function buildDaySummary(data, dateKey) {
     if (!isScheduledDay(habit, d)) return;
     scheduled++;
     const status = getStatus(habit, dateKey) || 'pending';
-    if (status === 'completed') completed++;
+    if (status === 'done') completed++;
     else if (status === 'missed') missed++;
     habits.push({ id: habit.id, title: habit.title, status });
   });

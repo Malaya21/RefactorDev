@@ -1,10 +1,11 @@
 import { sanitizeString } from './security';
 import { todayKey } from './date';
+import { HABIT_STATUSES, normalizeHabitStatus } from './historyHelpers';
 
 export const VALID_THEMES = ['dark', 'light', 'system'];
 export const VALID_LAYOUTS = ['default', 'compact', 'wide'];
 export const VALID_FREQUENCIES = ['daily', 'weekly', 'custom'];
-export const VALID_STATUSES = ['completed', 'missed'];
+export const VALID_STATUSES = HABIT_STATUSES;
 export const VALID_MOODS = ['great', 'good', 'neutral', 'low', 'bad'];
 
 export function isPlainObject(value) {
@@ -52,7 +53,7 @@ export function validateHistory(value) {
   if (!isPlainObject(value)) return {};
   return Object.entries(value).reduce((out, [key, val]) => {
     const safeKey = sanitizeDateKey(key, null);
-    const status = sanitizeEnum(val, VALID_STATUSES, '');
+    const status = normalizeHabitStatus(val);
     if (safeKey && status) out[safeKey] = status;
     return out;
   }, {});

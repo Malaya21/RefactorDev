@@ -79,16 +79,17 @@ function NoteModal() {
 function HabitNoteModal() {
   const { state, ui, actions } = useApp();
   const habit = useMemo(() => state.habits.find((h) => h.id === ui.habitNoteId), [state.habits, ui.habitNoteId]);
+  const dateKey = state.activeDate || todayKey();
   const [text, setText] = useState('');
   useEffect(() => {
-    setText((habit?.habitNotes || {})[todayKey()] || '');
-  }, [habit]);
+    setText((habit?.habitNotes || {})[dateKey] || '');
+  }, [habit, dateKey]);
   if (!habit) return null;
   return (
     <ModalShell>
-      <form className="modal__form" onSubmit={(e) => { e.preventDefault(); actions.saveHabitNote(habit.id, text); actions.closeModal(); }}>
+      <form className="modal__form" onSubmit={(e) => { e.preventDefault(); actions.saveHabitNote(habit.id, text, dateKey); actions.closeModal(); }}>
         <header className="modal__header"><h2>Habit Note</h2><button type="button" className="btn-icon modal-close" onClick={actions.closeModal}>×</button></header>
-        <label>Note for today <textarea value={text} rows="4" onChange={(e) => setText(e.target.value)} /></label>
+        <label>Note for {dateKey} <textarea value={text} rows="4" onChange={(e) => setText(e.target.value)} /></label>
         <footer className="modal__footer"><button type="button" className="btn btn--ghost" onClick={actions.closeModal}>Cancel</button><button type="submit" className="btn btn--primary">Save</button></footer>
       </form>
     </ModalShell>

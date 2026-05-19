@@ -13,6 +13,7 @@ import {
 import { sanitizeString } from '../utils/security';
 import { todayKey, msUntilMidnight } from '../utils/date';
 import { markComplete, markMissed, recalculate, setStatus } from '../services/streakService';
+import { canEditDate, LOCKED_DATE_MESSAGE } from '../utils/dateLocks';
 import { processDayChange } from '../services/archiveService';
 import { getNotificationStatus, requestNotificationPermission } from '../services/notificationService';
 import { logoutUser, observeAuthState } from '../services/authService';
@@ -257,6 +258,9 @@ export function AppProvider({ children }) {
     setSearch(search) {
       setUi((current) => ({ ...current, search }));
     },
+    setActiveDate(dateKey) {
+      commit((current) => ({ ...current, activeDate: dateKey || todayKey() }));
+    },
     toggleSidebar(open = null) {
       setUi((current) => ({ ...current, sidebarOpen: open ?? !current.sidebarOpen }));
     },
@@ -403,7 +407,7 @@ export function AppProvider({ children }) {
       }
     },
     
-    async markHabit(id, status) {
+    async markHabit(id, status, dateKey = todayKey()) {
       const blockReason = getHabitWriteBlockReason();
       if (blockReason) {
         console.warn('[ReflectFlow habit write] markHabit blocked', {
@@ -412,13 +416,23 @@ export function AppProvider({ children }) {
           authLoading: auth.loading,
           uid: auth.user?.uid || null,
           habitId: id,
-          status
+          status,
+          dateKey
         });
         toast(blockReason === 'missing authenticated user' ? 'Must be logged in to mark habits' : 'Still syncing your data. Please try again in a moment.', 'warning');
         return;
       }
 
       const userId = auth.user?.uid;
+      const normalizedStatus = status === 'completed' ? 'done' : status;
+      if (!['done', 'missed'].includes(normalizedStatus)) {
+        toast('Choose Done or Miss for this habit.', 'warning');
+        return;
+      }
+      if (!canEditDate(dateKey)) {
+        toast(LOCKED_DATE_MESSAGE, 'warning');
+        return;
+      }
       if (!isValidFirestoreDocumentId(id)) {
         console.error('[ReflectFlow habit write] Invalid habit ID for status update', { uid: userId, habitId: id, status });
         toast('Could not update status because this habit has an invalid document ID.', 'error');
@@ -428,7 +442,7 @@ export function AppProvider({ children }) {
       const writeToken = getNextHabitWriteToken(id);
       const previousHabit = stateRef.current.habits.find((habit) => habit.id === id) || null;
       const updatedHabit = previousHabit
-        ? (status === 'completed' ? markComplete(previousHabit) : markMissed(previousHabit))
+        ? (normalizedStatus === 'done' ? markComplete(previousHabit, dateKey) : markMissed(previousHabit, dateKey))
         : null;
 
       try {
@@ -445,19 +459,20 @@ export function AppProvider({ children }) {
           uid: userId,
           habitId: id,
           path: `users/${userId}/habits/${id}`,
-          status,
+          status: normalizedStatus,
+          dateKey,
           payload: updatedHabit
         });
         
         await createOrUpdateHabit(userId, updatedHabit);
-        if (status === 'completed') {
+        if (normalizedStatus === 'done') {
           try {
             const habitsAfterCompletion = stateRef.current.habits.map((habit) => habit.id === id ? updatedHabit : habit);
             const xpResult = await awardHabitCompletionXP(userId, {
               habitBefore: previousHabit,
               habitAfter: updatedHabit,
               habitsAfterCompletion,
-              dateKey: todayKey()
+              dateKey
             });
             if (xpResult.awardedXP) {
               showXpFeedback(xpResult.awardedXP, xpResult.leveledUp);
@@ -473,15 +488,17 @@ export function AppProvider({ children }) {
           uid: userId,
           habitId: id,
           path: `users/${userId}/habits/${id}`,
-          status
+          status: normalizedStatus,
+          dateKey
         });
-        toast(status === 'completed' ? 'Habit completed!' : 'Habit marked missed', status === 'completed' ? 'success' : 'warning');
+        toast(normalizedStatus === 'done' ? 'Habit completed!' : 'Habit marked missed', normalizedStatus === 'done' ? 'success' : 'warning');
       } catch (error) {
         console.error('[ReflectFlow habit write] Failed to persist status update', {
           uid: userId,
           habitId: id,
           path: `users/${userId}/habits/${id}`,
-          status,
+          status: normalizedStatus,
+          dateKey,
           payload: updatedHabit,
           error
         });
@@ -495,7 +512,8 @@ export function AppProvider({ children }) {
             uid: userId,
             habitId: id,
             path: `users/${userId}/habits/${id}`,
-            status
+            status: normalizedStatus,
+            dateKey
           });
         }
 
@@ -503,9 +521,13 @@ export function AppProvider({ children }) {
       }
     },
     
-    async clearHabitStatus(id) {
+    async clearHabitStatus(id, dateKey = todayKey()) {
       if (getHabitWriteBlockReason()) return;
       if (!isValidFirestoreDocumentId(id)) return;
+      if (!canEditDate(dateKey)) {
+        toast(LOCKED_DATE_MESSAGE, 'warning');
+        return;
+      }
       
       try {
         let updatedHabit;
@@ -513,7 +535,7 @@ export function AppProvider({ children }) {
           ...current,
           habits: current.habits.map((habit) => {
             if (habit.id !== id) return habit;
-            return updatedHabit = setStatus(habit, todayKey(), null);
+            return updatedHabit = setStatus(habit, dateKey, 'pending');
           })
         }));
 
@@ -526,7 +548,7 @@ export function AppProvider({ children }) {
       }
     },
     
-    async saveHabitNote(id, text) {
+    async saveHabitNote(id, text, dateKey = todayKey()) {
       const blockReason = getHabitWriteBlockReason();
       if (blockReason) {
         console.warn('[ReflectFlow habit write] saveHabitNote blocked', {
@@ -541,6 +563,10 @@ export function AppProvider({ children }) {
       }
 
       const userId = auth.user?.uid;
+      if (!canEditDate(dateKey)) {
+        toast(LOCKED_DATE_MESSAGE, 'warning');
+        return;
+      }
       if (!isValidFirestoreDocumentId(id)) {
         console.error('[ReflectFlow habit write] Invalid habit ID for habit note', { uid: userId, habitId: id });
         toast('Could not save note because this habit has an invalid document ID.', 'error');
@@ -555,8 +581,8 @@ export function AppProvider({ children }) {
             if (habit.id !== id) return habit;
             const habitNotes = { ...(habit.habitNotes || {}) };
             const clean = sanitizeString(text, '', 800);
-            if (clean) habitNotes[todayKey()] = clean;
-            else delete habitNotes[todayKey()];
+            if (clean) habitNotes[dateKey] = clean;
+            else delete habitNotes[dateKey];
             return updatedHabit = { ...habit, habitNotes };
           })
         }));
@@ -816,7 +842,9 @@ export function AppProvider({ children }) {
           && !hasLocalInitializedMarker(user.uid)
           && habitsFromDb.length === 0
           && notesFromDb.length === 0;
-        const habits = shouldSeedDefaults ? createDefaultHabits() : habitsFromDb;
+        const habits = shouldSeedDefaults
+          ? createDefaultHabits()
+          : habitsFromDb.map((habit, index) => recalculate(createDefaultHabit(index, habit)));
         const onboardingRequired = !hadCloudError && shouldRequireOnboarding(profile, habitsFromDb, notesFromDb, user.uid);
 
         setState((current) => ({
@@ -846,6 +874,10 @@ export function AppProvider({ children }) {
           }
         } else if (!hadCloudError) {
           markLocalInitialized(user.uid);
+          const needsHistoryMigration = JSON.stringify(habitsFromDb.map((habit) => habit.history || {})) !== JSON.stringify(habits.map((habit) => habit.history || {}));
+          if (needsHistoryMigration && habits.length) {
+            batchSaveHabits(user.uid, habits).catch((error) => warnCloud('Habit history migration save failed', error));
+          }
         }
 
         setDataError(hadCloudError);
