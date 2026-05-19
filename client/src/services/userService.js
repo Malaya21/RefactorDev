@@ -12,6 +12,10 @@ function profileRef(uid) {
   return doc(db, 'users', uid, 'profile', PROFILE_DOC_ID);
 }
 
+function preferencesRef(uid) {
+  return doc(db, 'users', uid, 'preferences', 'main');
+}
+
 export async function getUserProfile(uid) {
   if (!uid) {
     throw new Error('Invalid user ID');
@@ -70,6 +74,42 @@ export async function upsertAuthUserProfile(user, provider = 'password', options
 
   await createOrUpdateUserProfile(user.uid, profile);
   return profile;
+}
+
+export async function saveUserPreferences(uid, preferences) {
+  if (!uid || !preferences) {
+    throw new Error('Invalid user preferences payload');
+  }
+
+  const payload = {
+    interests: Array.isArray(preferences.interests) ? preferences.interests : [],
+    updatedAt: serverTimestamp()
+  };
+
+  await Promise.all([
+    setDoc(preferencesRef(uid), payload, { merge: true }),
+    setDoc(rootUserRef(uid), { preferences: payload }, { merge: true })
+  ]);
+  return payload;
+}
+
+export async function completeUserOnboarding(uid, interests) {
+  if (!uid) {
+    throw new Error('Invalid user ID');
+  }
+
+  const profilePatch = {
+    onboardingCompleted: true,
+    needsOnboarding: false,
+    onboardedAt: serverTimestamp()
+  };
+
+  await Promise.all([
+    saveUserPreferences(uid, { interests }),
+    createOrUpdateUserProfile(uid, profilePatch)
+  ]);
+
+  return profilePatch;
 }
 
 export async function updateUserSettings(uid, settings) {

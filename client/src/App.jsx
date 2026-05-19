@@ -7,8 +7,10 @@ import NotesPage from './pages/NotesPage';
 import SettingsPage from './pages/SettingsPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import OnboardingPage from './pages/OnboardingPage';
 import ToastContainer from './components/Toast/ToastContainer';
 import { useApp } from './context/AppContext';
+import Icon from './components/Icon/Icon';
 
 function getRedirectTarget(location) {
   const from = location.state?.from?.pathname || '/';
@@ -39,6 +41,28 @@ function AuthGate({ children }) {
       uid: null
     });
     return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  if (!auth.onboardingChecked) {
+    logRouteGuard('protected', 'waiting for onboarding status', {
+      path: location.pathname,
+      initialized: auth.initialized,
+      uid: auth.user.uid
+    });
+    return <AuthLoader />;
+  }
+
+  if (auth.onboardingRequired && location.pathname !== '/onboarding') {
+    logRouteGuard('protected', 'redirecting user to onboarding', {
+      path: location.pathname,
+      initialized: auth.initialized,
+      uid: auth.user.uid
+    });
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  if (!auth.onboardingRequired && location.pathname === '/onboarding') {
+    return <Navigate to="/" replace />;
   }
 
   logRouteGuard('protected', 'rendering protected route', {
@@ -94,13 +118,31 @@ function AuthLoader() {
   );
 }
 
+function XpFeedback() {
+  const { ui } = useApp();
+  if (!ui.xpFeedback?.length) return null;
+
+  return (
+    <div className="xp-feedback-stack" aria-live="polite" aria-atomic="false">
+      {ui.xpFeedback.map((item) => (
+        <div className={`xp-feedback ${item.leveledUp ? 'xp-feedback--level' : ''}`} key={item.id}>
+          <Icon name={item.leveledUp ? 'trophy' : 'zap'} size={17} />
+          <span>+{item.amount} XP{item.leveledUp ? ' - Level up!' : ''}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <>
       <ToastContainer />
+      <XpFeedback />
       <Routes>
         <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
         <Route path="/register" element={<PublicOnly><Register /></PublicOnly>} />
+        <Route path="/onboarding" element={<AuthGate><OnboardingPage /></AuthGate>} />
         <Route element={<AuthGate><AppLayout /></AuthGate>}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/habits" element={<HabitsPage />} />

@@ -60,7 +60,7 @@ export async function registerUser(email, password, displayName = '') {
     await updateProfile(credential.user, { displayName: displayName.trim() });
   }
 
-  await upsertAuthUserProfile(credential.user, 'password');
+  await upsertAuthUserProfile(credential.user, 'password', { needsOnboarding: true });
   rememberLastLoginMethod('password');
   return normalizeUser(credential.user);
 }

@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   consumeFreshStartToastFlag,
+  createDefaultHabit,
   createDefaultHabits,
   importJSON,
   loadState,
@@ -18,7 +19,9 @@ import { logoutUser, observeAuthState } from '../services/authService';
 import { useNotifications } from '../hooks/useNotifications';
 import { batchSaveHabits, createOrUpdateHabit, deleteAllHabits, deleteHabitFromFirestore, isValidFirestoreDocumentId, loadHabits } from '../services/habitService';
 import { createOrUpdateNote, deleteAllNotes, deleteNoteFromFirestore, loadNotes } from '../services/noteService';
-import { markUserInitialized } from '../services/userService';
+import { completeUserOnboarding, getUserProfile, markUserInitialized } from '../services/userService';
+import { getHabitTemplatesForInterests } from '../data/habitTemplates';
+import { awardHabitCompletionXP, DEFAULT_GAMIFICATION, ensureGamificationProfile, subscribeToGamification } from '../services/gamificationService';
 
 const AppContext = createContext(null);
 const CLOUD_RESTORE_TIMEOUT_MS = 10000;
@@ -71,6 +74,12 @@ function markLocalInitialized(userId) {
   }
 }
 
+function shouldRequireOnboarding(profile, habits, notes, userId) {
+  if (profile?.onboardingCompleted === true) return false;
+  if (profile?.needsOnboarding === true || profile?.onboardingCompleted === false) return true;
+  return !hasLocalInitializedMarker(userId) && habits.length === 0 && notes.length === 0;
+}
+
 // Empty user state (no habits/notes)
 function emptyUserState() {
   const base = loadState();
@@ -90,7 +99,9 @@ export function AppProvider({ children }) {
   const [auth, setAuth] = useState({
     user: null,
     loading: true,
-    initialized: false
+    initialized: false,
+    onboardingRequired: false,
+    onboardingChecked: false
   });
   const authSessionRef = useRef(0);
   const habitWriteTokensRef = useRef(new Map());
@@ -98,6 +109,7 @@ export function AppProvider({ children }) {
   // Data loading state
   const [dataLoading, setDataLoading] = useState(false);
   const [dataError, setDataError] = useState(false);
+  const [gamification, setGamification] = useState(DEFAULT_GAMIFICATION);
   
   // UI state
   const [ui, setUi] = useState({
@@ -109,8 +121,18 @@ export function AppProvider({ children }) {
     notificationOpen: false,
     notificationStatus: getNotificationStatus(loadState().settings),
     search: '',
-    toasts: []
+    toasts: [],
+    xpFeedback: []
   });
+
+  const showXpFeedback = useCallback((amount, leveledUp = false) => {
+    if (!amount) return;
+    const item = { id: uid(), amount, leveledUp };
+    setUi((current) => ({ ...current, xpFeedback: [...(current.xpFeedback || []), item] }));
+    window.setTimeout(() => {
+      setUi((current) => ({ ...current, xpFeedback: (current.xpFeedback || []).filter((entry) => entry.id !== item.id) }));
+    }, 1500);
+  }, []);
 
   /**
    * Commit: Update state and persist non-user-data to localStorage
@@ -182,6 +204,52 @@ export function AppProvider({ children }) {
       } catch (error) {
         console.warn('Sign out failed:', error);
         toast('Could not sign out. Please try again.', 'error');
+      }
+    },
+
+    async finishOnboarding(interests) {
+      const userId = auth.user?.uid;
+      if (!userId) {
+        toast('Must be logged in to finish onboarding', 'error');
+        return false;
+      }
+
+      const cleanInterests = Array.isArray(interests) ? interests.filter(Boolean) : [];
+      if (!cleanInterests.length) {
+        toast('Choose at least one interest to build your starter habits.', 'warning');
+        return false;
+      }
+
+      try {
+        const starterHabits = getHabitTemplatesForInterests(cleanInterests).map((template, index) => recalculate(createDefaultHabit(index, {
+          ...template,
+          createdAt: new Date().toISOString(),
+          order: index
+        })));
+
+        await Promise.all([
+          completeUserOnboarding(userId, cleanInterests),
+          ensureGamificationProfile(userId),
+          starterHabits.length ? batchSaveHabits(userId, starterHabits) : Promise.resolve([])
+        ]);
+
+        markLocalInitialized(userId);
+        setAuth((current) => ({
+          ...current,
+          onboardingRequired: false,
+          onboardingChecked: true
+        }));
+        setState((current) => ({
+          ...current,
+          habits: starterHabits,
+          notes: current.notes || []
+        }));
+        toast('Starter habits created. Welcome to your dashboard!', 'success');
+        return true;
+      } catch (error) {
+        console.error('Failed to complete onboarding:', error);
+        toast('Could not finish onboarding. Please try again.', 'error', 5200);
+        return false;
       }
     },
     
@@ -382,6 +450,25 @@ export function AppProvider({ children }) {
         });
         
         await createOrUpdateHabit(userId, updatedHabit);
+        if (status === 'completed') {
+          try {
+            const habitsAfterCompletion = stateRef.current.habits.map((habit) => habit.id === id ? updatedHabit : habit);
+            const xpResult = await awardHabitCompletionXP(userId, {
+              habitBefore: previousHabit,
+              habitAfter: updatedHabit,
+              habitsAfterCompletion,
+              dateKey: todayKey()
+            });
+            if (xpResult.awardedXP) {
+              showXpFeedback(xpResult.awardedXP, xpResult.leveledUp);
+              if (xpResult.leveledUp) {
+                toast(`Level up! You reached Level ${xpResult.currentLevel}.`, 'success', 5200);
+              }
+            }
+          } catch (error) {
+            warnCloud('XP award failed after habit completion', error);
+          }
+        }
         console.info('[ReflectFlow habit write] Status update persisted', {
           uid: userId,
           habitId: id,
@@ -648,7 +735,7 @@ export function AppProvider({ children }) {
         toast('Failed to reset data. Please try again.', 'error');
       }
     }
-  }), [auth.initialized, auth.loading, auth.user?.uid, commit, getHabitWriteBlockReason, getNextHabitWriteToken, isLatestHabitWrite, syncUnavailable, toast]);
+  }), [auth.initialized, auth.loading, auth.user?.uid, commit, getHabitWriteBlockReason, getNextHabitWriteToken, isLatestHabitWrite, showXpFeedback, syncUnavailable, toast]);
 
   useEffect(() => {
     let active = true;
@@ -660,9 +747,10 @@ export function AppProvider({ children }) {
       authResolved = true;
       authSessionRef.current += 1;
       logCloud('Auth initialized', { uid: null, timedOut: true });
-      setAuth({ user: null, loading: false, initialized: true });
+      setAuth({ user: null, loading: false, initialized: true, onboardingRequired: false, onboardingChecked: true });
       setDataLoading(false);
       setDataError(false);
+      setGamification(DEFAULT_GAMIFICATION);
       setState(emptyUserState());
     }, AUTH_RESTORE_TIMEOUT_MS);
 
@@ -673,12 +761,13 @@ export function AppProvider({ children }) {
       authSessionRef.current = sessionId;
       logCloud('Auth state restored', { sessionId, uid: user?.uid || null, email: user?.email || null });
       logCloud('Auth initialized', { uid: user?.uid || null, hasUser: !!user });
-      setAuth({ user, loading: false, initialized: true });
+      setAuth({ user, loading: false, initialized: true, onboardingRequired: false, onboardingChecked: !user?.uid });
 
       if (!user?.uid) {
         logCloud('No authenticated user; clearing user state', { sessionId });
         setDataLoading(false);
         setDataError(false);
+        setGamification(DEFAULT_GAMIFICATION);
         setState(emptyUserState());
         return;
       }
@@ -694,15 +783,21 @@ export function AppProvider({ children }) {
       });
 
       Promise.allSettled([
+        withTimeout(getUserProfile(user.uid), 'Load user profile'),
         withTimeout(loadHabits(user.uid), 'Load habits'),
         withTimeout(loadNotes(user.uid), 'Load notes')
-      ]).then(async ([habitsResult, notesResult]) => {
+      ]).then(async ([profileResult, habitsResult, notesResult]) => {
         if (!active || authSessionRef.current !== sessionId) return;
 
+        const profile = profileResult.status === 'fulfilled' ? profileResult.value : null;
         const habitsFromDb = habitsResult.status === 'fulfilled' ? habitsResult.value : [];
         const notesFromDb = notesResult.status === 'fulfilled' ? notesResult.value : [];
         const failedLoads = [habitsResult, notesResult].filter((result) => result.status === 'rejected');
         const hadCloudError = failedLoads.length > 0;
+
+        if (profileResult.status === 'rejected') {
+          warnCloud('Firestore profile fetch failed', profileResult.reason);
+        }
 
         if (habitsResult.status === 'rejected') {
           warnCloud('Firestore habits fetch failed', habitsResult.reason);
@@ -717,10 +812,12 @@ export function AppProvider({ children }) {
         }
 
         const shouldSeedDefaults = !hadCloudError
+          && !shouldRequireOnboarding(profile, habitsFromDb, notesFromDb, user.uid)
           && !hasLocalInitializedMarker(user.uid)
           && habitsFromDb.length === 0
           && notesFromDb.length === 0;
         const habits = shouldSeedDefaults ? createDefaultHabits() : habitsFromDb;
+        const onboardingRequired = !hadCloudError && shouldRequireOnboarding(profile, habitsFromDb, notesFromDb, user.uid);
 
         setState((current) => ({
           ...current,
@@ -728,7 +825,13 @@ export function AppProvider({ children }) {
           notes: notesFromDb
         }));
 
-        if (shouldSeedDefaults) {
+        setAuth((current) => current.user?.uid === user.uid
+          ? { ...current, onboardingRequired, onboardingChecked: true }
+          : current);
+
+        if (onboardingRequired) {
+          logCloud('Onboarding required before starter habit generation', { sessionId, uid: user.uid });
+        } else if (shouldSeedDefaults) {
           logCloud('Seeding default habits for first local initialization', { sessionId, uid: user.uid, count: habits.length });
           try {
             await withTimeout(batchSaveHabits(user.uid, habits), 'Seed default habits');
@@ -775,6 +878,23 @@ export function AppProvider({ children }) {
       unsubscribe();
     };
   }, [toast]);
+
+  useEffect(() => {
+    const userId = auth.user?.uid;
+    if (!userId) {
+      setGamification(DEFAULT_GAMIFICATION);
+      return undefined;
+    }
+
+    ensureGamificationProfile(userId).catch((error) => {
+      warnCloud('Gamification profile initialization failed', error);
+    });
+
+    return subscribeToGamification(userId, setGamification, (error) => {
+      warnCloud('Gamification realtime listener failed', error);
+      setGamification(DEFAULT_GAMIFICATION);
+    });
+  }, [auth.user?.uid]);
 
   useNotifications(state, {
     onStatusChange: useCallback((status) => {
@@ -825,7 +945,7 @@ export function AppProvider({ children }) {
   }, [toast]);
 
   const quote = QUOTES[state.quoteIndex % QUOTES.length];
-  const value = useMemo(() => ({ state, ui, auth, dataLoading, dataError, actions, quote }), [state, ui, auth, dataLoading, dataError, actions, quote]);
+  const value = useMemo(() => ({ state, ui, auth, gamification, dataLoading, dataError, actions, quote }), [state, ui, auth, gamification, dataLoading, dataError, actions, quote]);
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
 

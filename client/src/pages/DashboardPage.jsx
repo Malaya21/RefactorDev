@@ -1,6 +1,6 @@
 import { useApp } from '../context/AppContext';
 import { useAnalytics } from '../hooks/useAnalytics';
-import { Achievements, ProductivityRing, StatsGrid, StreakList, TodaySummary, WeeklyOverview } from '../components/Dashboard/DashboardWidgets';
+import { Achievements, ProductivityRing, StatsGrid, StreakList, TodaySummary, WeeklyOverview, XPProgressCard } from '../components/Dashboard/DashboardWidgets';
 
 export default function DashboardPage() {
   const { quote } = useApp();
@@ -22,6 +22,7 @@ export default function DashboardPage() {
         <cite>- {quote.author}</cite>
       </div>
       <StatsGrid />
+      <XPProgressCard />
       <div className="dashboard-grid">
         <article className="card glass"><h2>Today&apos;s Summary</h2><TodaySummary /></article>
         <article className="card glass"><h2>Weekly Overview</h2><WeeklyOverview /></article>
